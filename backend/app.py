@@ -7,12 +7,14 @@ Handles:
 - Session management
 - Routing queries to the NLP module
 - Coordinating responses from the database
+- Serving the front-end (HTML/CSS/JS) files
 """
 
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, send_from_directory
 from flask_cors import CORS
 import uuid
 import logging
+import os
 from datetime import datetime
 
 from nlp.nlp_engine import NLPEngine
@@ -20,11 +22,14 @@ from database.db_manager import DatabaseManager
 from routes.chat_routes import chat_bp
 from routes.faq_routes import faq_bp
 from routes.feedback_routes import feedback_bp
-from routes.auth_routes import auth_bp
+
+# ── Path setup ──────────────────────────────────────────────────────
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.abspath(os.path.join(BACKEND_DIR, '..', 'frontend'))
 
 # ── App Setup ────────────────────────────────────────────────────
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})   # Restrict origins in production
+CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "X-Session-ID"])
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,7 +55,15 @@ app.db_manager = db_manager
 app.register_blueprint(chat_bp,     url_prefix='/api')
 app.register_blueprint(faq_bp,      url_prefix='/api')
 app.register_blueprint(feedback_bp, url_prefix='/api')
-app.register_blueprint(auth_bp,     url_prefix='/api')
+
+# ── Serve frontend ─────────────────────────────────────────────────
+@app.route('/')
+def serve_index():
+    return send_from_directory(FRONTEND_DIR, 'index.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(FRONTEND_DIR, filename)
 
 # ── Health check ──────────────────────────────────────────────────
 @app.route('/api/health', methods=['GET'])
@@ -90,4 +103,5 @@ def server_error(e):
 # ── Entry point ───────────────────────────────────────────────────
 if __name__ == '__main__':
     logger.info("Starting ICCT Chatbot back-end server…")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    logger.info(f"Frontend directory: {FRONTEND_DIR}")
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
