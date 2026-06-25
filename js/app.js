@@ -3,60 +3,23 @@
  * Component 1: Web-Based Chat Interface (Front-End)
  */
 
-function init() {
-  // Check if user is logged in
-  const token = localStorage.getItem('icct_token');
-  const isGuest = localStorage.getItem('icct_guest');
-  if (!token && !isGuest) {
-    window.location.href = 'login.html';
-    return;
-  }
-
-  Utils.saveLocal('icct_session', sessionId);
-  Chat.renderWelcome();
-  _bindEvents();
-  _checkBackendHealth();
-}
 const ChatApp = (() => {
 
-  let sessionId = Utils.loadLocal('icct_session') || Utils.generateSessionId();
+  let sessionId = Utils.generateSessionId();
   let isLoading = false;
-  let messageHistory = Utils.loadLocal('icct_history') || [];
+  let messageHistory = [];
 
-  const input    = () => document.getElementById('user-input');
-  const sendBtn  = () => document.getElementById('send-btn');
+  const input     = () => document.getElementById('user-input');
+  const sendBtn   = () => document.getElementById('send-btn');
   const charCount = () => document.getElementById('char-count');
-  const status   = () => document.getElementById('bot-status');
+  const status    = () => document.getElementById('bot-status');
 
   // ── Init ──────────────────────────────────────────────────────
- function init() {
-    Utils.saveLocal('icct_session', sessionId);
+  function init() {
     Chat.renderWelcome();
+    Chat.renderSessionHistory();
     _bindEvents();
     _checkBackendHealth();
-    _loadProfile();
-  }
-
-  function _loadProfile() {
-    const user = Utils.loadLocal('icct_user');
-    const token = Utils.loadLocal('icct_token');
-    const isGuest = Utils.loadLocal('icct_guest');
-
-    if (user) {
-      const initials = (user.first_name?.[0] || '') + (user.last_name?.[0] || '');
-      document.getElementById('profile-avatar').textContent    = initials || '👤';
-      document.getElementById('profile-avatar-lg').textContent = initials || '👤';
-      document.getElementById('profile-name').textContent      = user.first_name || 'User';
-      document.getElementById('profile-fullname').textContent  = `${user.first_name} ${user.last_name}`;
-      document.getElementById('profile-email').textContent     = user.email || '—';
-      document.getElementById('profile-studentid').textContent = user.student_id ? `ID: ${user.student_id}` : '';
-    } else if (isGuest) {
-      document.getElementById('profile-name').textContent = 'Guest';
-    }
-  }
-
-  function toggleProfile() {
-    document.getElementById('profile-dropdown').classList.toggle('open');
   }
 
   function _bindEvents() {
@@ -110,10 +73,12 @@ const ChatApp = (() => {
 
     // Render user bubble
     Chat.appendUserMessage(text);
-    Chat.addHistoryEntry(text);
 
     // Store in local history
     messageHistory.push({ role: 'user', content: text, time: Date.now() });
+
+    // Update sidebar to show current session
+    Chat.updateCurrentSession(sessionId, messageHistory);
 
     // Show typing
     isLoading = true;
@@ -126,7 +91,9 @@ const ChatApp = (() => {
       Chat.appendBotMessage(data.reply, data.intent);
 
       messageHistory.push({ role: 'bot', content: data.reply, intent: data.intent, time: Date.now() });
-      Utils.saveLocal('icct_history', messageHistory.slice(-50));
+
+      // Save updated session
+      Chat.updateCurrentSession(sessionId, messageHistory);
 
     } catch (err) {
       Chat.hideTyping();
@@ -149,15 +116,49 @@ const ChatApp = (() => {
     sendMessage();
   }
 
-  /** Clear chat and reset session */
+  /** Load a past session into the chat area */
+  function loadSession(sid) {
+    const sessions = Utils.loadLocal('icct_sessions') || [];
+    const session = sessions.find(s => s.id === sid);
+    if (!session) return;
+
+    // Save current session first if it has messages
+    if (messageHistory.length > 0) {
+      Chat.updateCurrentSession(sessionId, messageHistory);
+    }
+
+    // Load the selected session
+    sessionId = session.id;
+    messageHistory = session.history || [];
+
+    // Render messages
+    const area = document.getElementById('messages-area');
+    area.innerHTML = '';
+    messageHistory.forEach(m => {
+      if (m.role === 'user') Chat.appendUserMessage(m.content);
+      else Chat.appendBotMessage(m.content, m.intent);
+    });
+
+    Chat.renderSessionHistory(sid);
+    input().focus();
+  }
+
+  /** Start a brand new chat (saves current session to history) */
   function clearChat() {
+    // Save current session before clearing
+    if (messageHistory.length > 0) {
+      Chat.updateCurrentSession(sessionId, messageHistory);
+    }
+
+    // Start fresh
     sessionId = Utils.generateSessionId();
     messageHistory = [];
-    Utils.saveLocal('icct_session', sessionId);
-    Utils.saveLocal('icct_history', []);
-    Chat.clearMessages();
+
+    Chat.renderWelcome();
+    Chat.renderSessionHistory();
+    document.getElementById('suggestions-bar').style.display = 'flex';
     input().focus();
-    Utils.showToast('Chat cleared. New session started.');
+    Utils.showToast('New chat started.');
   }
 
   /** Export chat as a plain-text file */
@@ -179,12 +180,5 @@ const ChatApp = (() => {
   // Auto-init when DOM is ready
   document.addEventListener('DOMContentLoaded', init);
 
-  return { sendMessage, sendSuggestion, clearChat, exportChat, logout, toggleProfile };
-  function logout() {
-  localStorage.removeItem('icct_token');
-  localStorage.removeItem('icct_guest');
-  localStorage.removeItem('icct_session');
-  localStorage.removeItem('icct_history');
-  window.location.href = 'login.html';
-}
+  return { sendMessage, sendSuggestion, clearChat, exportChat, loadSession };
 })();
