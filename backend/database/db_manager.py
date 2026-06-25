@@ -91,7 +91,7 @@ class DatabaseManager:
                     )
                 """)
 
-               # Feedback table
+                # Feedback table
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS feedback (
                         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,19 +100,6 @@ class DatabaseManager:
                         rating      INTEGER NOT NULL,
                         comment     TEXT,
                         timestamp   TEXT    DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-
-                # Users table
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS users (
-                        id          TEXT    PRIMARY KEY,
-                        first_name  TEXT    NOT NULL,
-                        last_name   TEXT    NOT NULL,
-                        email       TEXT    NOT NULL UNIQUE,
-                        student_id  TEXT,
-                        password    TEXT    NOT NULL,
-                        created_at  TEXT    DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
 
@@ -262,32 +249,3 @@ class DatabaseManager:
             sessions = cur.fetchone()[0]
 
         return {"total_messages": total, "unique_sessions": sessions, "top_intents": intents}
-
-    # ── User Auth ──────────────────────────────────────────────────
-    def get_user_by_email(self, email: str) -> dict | None:
-        with self._get_conn() as conn:
-            cur = conn.cursor()
-            cur.execute("SELECT * FROM users WHERE email = ?", (email,))
-            row = cur.fetchone()
-            return dict(row) if row else None
-
-    def create_user(self, user: dict) -> bool:
-        try:
-            with self._get_conn() as conn:
-                conn.execute(
-                    """INSERT INTO users (id, first_name, last_name, email, student_id, password)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
-                    (
-                        user['id'],
-                        user['first_name'],
-                        user['last_name'],
-                        user['email'],
-                        user.get('student_id', ''),
-                        user['password']
-                    )
-                )
-                conn.commit()
-            return True
-        except Exception as e:
-            logger.error(f"DatabaseManager: create_user failed — {e}")
-            return False
