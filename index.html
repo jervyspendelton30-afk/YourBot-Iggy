@@ -202,24 +202,39 @@
   <script src="js/chat.js"></script>
   <script src="js/app.js"></script>
 
-  <script>
-    window.addEventListener('DOMContentLoaded', function () {
-      const token       = localStorage.getItem('icct_token');
-      const loginBtn    = document.getElementById('nav-login-btn');
-      const registerBtn = document.getElementById('nav-register-btn');
-      const profileMenu = document.getElementById('profile-menu');
+ <script>
+  window.addEventListener('DOMContentLoaded', function () {
+    const token       = localStorage.getItem('icct_token');
+    const loginBtn    = document.getElementById('nav-login-btn');
+    const registerBtn = document.getElementById('nav-register-btn');
+    const profileMenu = document.getElementById('profile-menu');
 
-      if (token) {
-        if (loginBtn)    loginBtn.style.display    = 'none';
-        if (registerBtn) registerBtn.style.display = 'none';
-        if (profileMenu) profileMenu.style.display = 'flex';
-      } else {
-        if (loginBtn)    loginBtn.style.display    = '';
-        if (registerBtn) registerBtn.style.display = '';
-        if (profileMenu) profileMenu.style.display = 'none';
-      }
-    });
-  </script>
+    if (token) {
+      // Logged in — hide login/register, show profile
+      if (loginBtn)    loginBtn.style.display    = 'none';
+      if (registerBtn) registerBtn.style.display = 'none';
+      if (profileMenu) profileMenu.style.display = 'flex';
+
+      // Try to decode user info from localStorage
+      const firstName = localStorage.getItem('icct_first_name') || 'User';
+      const email     = localStorage.getItem('icct_email') || '';
+
+      const nameEl  = document.getElementById('profile-name');
+      const fullEl  = document.getElementById('profile-fullname');
+      const emailEl = document.getElementById('profile-email');
+
+      if (nameEl)  nameEl.textContent  = firstName;
+      if (fullEl)  fullEl.textContent  = firstName;
+      if (emailEl) emailEl.textContent = email;
+
+    } else {
+      // Guest — hide profile menu completely
+      if (loginBtn)    loginBtn.style.display    = '';
+      if (registerBtn) registerBtn.style.display = '';
+      if (profileMenu) profileMenu.style.display = 'none';
+    }
+  });
+</script>
 
 </body>
 </html>
