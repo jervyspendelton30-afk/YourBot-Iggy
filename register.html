@@ -434,6 +434,33 @@
           <span class="field-error">Passwords do not match.</span>
         </div>
 
+        <!-- Security Question -->
+<div class="form-group" id="group-security-question">
+  <label class="form-label" for="security-question">Security Question</label>
+  <div class="input-wrap">
+    <span class="input-icon">🔒</span>
+    <select id="security-question" class="form-input" style="padding-left:38px;">
+      <option value="">-- Select a question --</option>
+      <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+      <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+      <option value="What is the name of your elementary school?">What is the name of your elementary school?</option>
+      <option value="What is your favorite food?">What is your favorite food?</option>
+      <option value="What city were you born in?">What city were you born in?</option>
+    </select>
+  </div>
+  <span class="field-error">Please select a security question.</span>
+</div>
+
+<!-- Security Answer -->
+<div class="form-group" id="group-security-answer">
+  <label class="form-label" for="security-answer">Security Answer</label>
+  <div class="input-wrap">
+    <span class="input-icon">💬</span>
+    <input type="text" id="security-answer" class="form-input"
+           placeholder="Your answer (not case-sensitive)"/>
+  </div>
+  <span class="field-error">Security answer is required.</span>
+</div>
         <!-- Terms -->
         <label class="terms-label">
           <input type="checkbox" id="terms"/>
@@ -564,6 +591,13 @@
       const confirmOk = password === confirm && confirm.length > 0;
       setFieldError('group-confirm', !confirmOk); if (!confirmOk) ok = false;
 
+      // ── Security question & answer ──
+      const question = document.getElementById('security-question').value;
+      const answer   = document.getElementById('security-answer').value.trim();
+
+      setFieldError('group-security-question', !question); if (!question) ok = false;
+      setFieldError('group-security-answer',   !answer);   if (!answer)   ok = false;
+
       if (!terms) {
         showAlert('Please agree to the Terms of Service to continue.');
         ok = false;
@@ -586,11 +620,13 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            first_name: document.getElementById('firstname').value.trim(),
-            last_name:  document.getElementById('lastname').value.trim(),
-            email:      document.getElementById('email').value.trim(),
-            student_id: document.getElementById('studentid').value.trim(),
-            password:   document.getElementById('password').value,
+            first_name:        document.getElementById('firstname').value.trim(),
+            last_name:         document.getElementById('lastname').value.trim(),
+            email:             document.getElementById('email').value.trim(),
+            student_id:        document.getElementById('studentid').value.trim(),
+            password:          document.getElementById('password').value,
+            security_question: document.getElementById('security-question').value,
+            security_answer:   document.getElementById('security-answer').value.trim().toLowerCase(),
           })
         });
 
@@ -607,15 +643,25 @@
     });
 
     // ── Clear errors on input ──
-    ['firstname','lastname','email','password','confirm'].forEach(id => {
+    ['firstname','lastname','email','password','confirm','security-answer'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
         const groupMap = {
-          firstname: 'group-firstname', lastname: 'group-lastname',
-          email: 'group-email', password: 'group-password', confirm: 'group-confirm'
+          firstname:         'group-firstname',
+          lastname:          'group-lastname',
+          email:             'group-email',
+          password:          'group-password',
+          confirm:           'group-confirm',
+          'security-answer': 'group-security-answer',
         };
         setFieldError(groupMap[id], false);
         hideAlert();
       });
+    });
+
+    // ── Clear security question error on change ──
+    document.getElementById('security-question').addEventListener('change', () => {
+      setFieldError('group-security-question', false);
+      hideAlert();
     });
   </script>
 
