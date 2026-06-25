@@ -22,7 +22,25 @@
       </div>
     </div>
     <nav class="header-nav">
-      <a href="about.html" class="nav-link" data-page="about">About</a>
+     a href="about.html" class="nav-link" data-page="about">About</a>
+      <div class="profile-menu" id="profile-menu">
+        <button class="profile-btn" id="profile-btn" onclick="ChatApp.toggleProfile()">
+          <div class="profile-avatar" id="profile-avatar">👤</div>
+          <span id="profile-name">Guest</span> ▾
+        </button>
+        <div class="profile-dropdown" id="profile-dropdown">
+          <div class="profile-card">
+            <div class="profile-avatar-lg" id="profile-avatar-lg">👤</div>
+            <div class="profile-info">
+              <div class="profile-fullname" id="profile-fullname">Guest User</div>
+              <div class="profile-email" id="profile-email">—</div>
+              <div class="profile-studentid" id="profile-studentid"></div>
+            </div>
+          </div>
+          <div class="profile-divider"></div>
+          <button class="profile-logout" onclick="ChatApp.logout()">🚪 Logout</button>
+        </div>
+      </div>
     </nav>
   </header>
 
