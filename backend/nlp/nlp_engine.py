@@ -289,10 +289,6 @@ RESPONSES: Dict[str, str] = {
 # ---------------------------------------------------------------------------
 # Out-of-scope witty responses
 # ---------------------------------------------------------------------------
-# Shown when a user asks a valid, meaningful question that is simply outside
-# the bot's domain (e.g. weather, games, life advice).
-# generate_response() picks one at random so replies don't feel repetitive.
-
 OUT_OF_SCOPE_RESPONSES: List[str] = [
     "Ha, great question — but I'm afraid I left my crystal ball at the registrar's office. 😄 "
     "I'm only trained to help with ICCT Colleges stuff like enrollment, courses, tuition, and the like. "
@@ -333,46 +329,23 @@ CLARIFICATION_LABELS: Dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 def _is_gibberish(text: str) -> bool:
-    """
-    Returns True if the input appears random or meaningless (no real question intent).
-    Returns False if the input looks like a genuine — even if off-topic — human message.
-
-    Checks for:
-    - Single character input           (e.g. "a", "1", "?")
-    - Purely numeric input             (e.g. "12", "999", "2025")
-    - Purely symbolic / punctuation    (e.g. "???", "!!!", "...", "@#$")
-    - Mixed numbers and symbols only   (e.g. "123!", "#1")
-    - Very short non-word input        (e.g. "xy", "zz")
-    - Known keyboard-mash filler words (e.g. "asdf", "test", "qwerty")
-    - Single token with no vowels      (e.g. "fghsd", "zxcvb")
-    - Single token with very high consonant-cluster density (e.g. "dfjkls")
-    - Cut-off sentence fragments       (e.g. "when is the", "what a")
-    """
     clean = text.strip().lower()
 
-    # Empty after stripping
     if not clean:
         return True
 
-    # Single character — always meaningless regardless of what it is
     if len(clean) == 1:
         return True
 
-    # Purely numeric — no linguistic content (e.g. "12", "999", "2025")
     if re.fullmatch(r"\d+", clean):
         return True
 
-    # Purely symbolic / punctuation (e.g. "???", "!!!", "...", "@#$%")
     if re.fullmatch(r"[\W_]+", clean):
         return True
 
-    # Mix of numbers and symbols only — no letters at all (e.g. "123!", "#1", "007")
     if re.fullmatch(r"[\d\W_]+", clean):
         return True
 
-    # Common unfinished fragments. These contain question words, but they do
-    # not contain enough meaning to safely answer or search the FAQ database.
-    # Examples: "when is the", "what a", "how to", "can i", "where is".
     cut_off_patterns = [
         r"^(when|what|where|who|why|how)$",
         r"^(when|what|where|who|why|how)\s+(is|are|do|does|did|can|could|would|will|should)$",
@@ -384,23 +357,18 @@ def _is_gibberish(text: str) -> bool:
     if any(re.fullmatch(pattern, clean) for pattern in cut_off_patterns):
         return True
 
-    # Very short (2-3 chars) -- only allow known meaningful short words
     common_short = {
-        # Common 2-letter English words
         "hi", "ok", "no", "go", "do", "be", "me", "we", "he", "it",
         "is", "am", "an", "as", "at", "by", "if", "in", "of", "on",
         "or", "so", "to", "up", "us", "my", "ah", "oh", "ow", "ew",
-        # Common 3-letter English words / greetings
         "yes", "yep", "nah", "hey", "bye", "sup", "how", "why", "who",
         "the", "and", "can", "did", "get", "got", "has", "had", "his",
         "its", "let", "may", "now", "our", "out", "was", "way", "you",
-        # Filipino short words
         "oo", "di", "ba", "po", "nga", "ano", "ate", "kuya", "oo po", "di po",
     }
     if len(clean) <= 3 and clean not in common_short:
         return True
 
-    # Known filler / keyboard-mash / test words
     filler_words = {
         "test", "testing", "asdf", "qwerty", "lol", "haha",
         "blah", "asd", "zxc", "qwe", "abc", "xyz",
@@ -408,27 +376,20 @@ def _is_gibberish(text: str) -> bool:
     if clean in filler_words:
         return True
 
-    # Single-token deeper checks
     tokens = clean.split()
     if len(tokens) == 1:
         token = tokens[0]
         vowels = set("aeiou")
 
-        # No vowels at all → almost certainly not a real word
         if len(token) > 2 and not any(c in vowels for c in token):
             return True
 
-        # Very high consonant-cluster density (keyboard mashing)
         if len(token) >= 6:
             clusters = re.findall(r"[bcdfghjklmnpqrstvwxyz]{3,}", token)
             cluster_chars = sum(len(c) for c in clusters)
             if cluster_chars / len(token) > 0.65:
                 return True
 
-            # Single long words that do not contain any common English/Filipino
-            # letter patterns are usually keyboard mashes, not real questions.
-            # This catches examples like "dadjhakad" while preserving real words
-            # like "weather", "computer", "science", "enrollment", etc.
             common_letter_patterns = {
                 "the", "and", "ing", "ion", "ent", "men", "ter", "com",
                 "pro", "sch", "cou", "our", "urse", "sci", "cie", "enc",
@@ -473,7 +434,6 @@ class NLPEngine:
                 self._example_texts.append(self._normalize(example))
                 self._example_intents.append(intent)
 
-        # Best option: sentence-transformers, if the package/model exists locally.
         try:
             from sentence_transformers import SentenceTransformer  # type: ignore
 
@@ -489,8 +449,6 @@ class NLPEngine:
             logger.warning(
                 "NLPEngine: sentence-transformers unavailable, using TF-IDF fallback. %s", exc)
 
-        # Practical fallback: TF-IDF similarity. This is still example-based and
-        # much better than counting a single keyword such as 'enrollment'.
         try:
             from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 
@@ -572,7 +530,6 @@ class NLPEngine:
             intent: 0.0 for intent in self._intent_names}
 
         for intent, score in zip(self._example_intents, example_scores):
-            # Keep the best example match for each intent.
             intent_scores[intent] = max(intent_scores[intent], float(score))
 
         ranked = sorted(intent_scores.items(),
@@ -723,30 +680,63 @@ class NLPEngine:
         return _is_gibberish(text)
 
     def get_fallback_reply(self, text: str) -> str:
-        """
-        Returns the right fallback reply based on input type:
-        - Gibberish / meaningless  →  plain 'I didn't quite understand' message
-        - Valid but out-of-scope   →  witty, human-feeling redirect (random pick)
-        """
         if _is_gibberish(text):
             return RESPONSES["fallback"]
         return random.choice(OUT_OF_SCOPE_RESPONSES)
 
+    # ── Groq AI integration ──────────────────────────────────────────────────
+    def _ask_groq(self, user_message: str) -> str | None:
+        """
+        Send the user message to Groq's LLaMA model and return its reply.
+        Returns None if the API call fails or GROQ_API_KEY is not set.
+        """
+        try:
+            import os
+            from groq import Groq
+            client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+            completion = client.chat.completions.create(
+                model="llama3-8b-8192",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are Iggy, the official AI chatbot of ICCT Colleges in Cainta, Rizal, Philippines. "
+                            "You only answer questions about ICCT Colleges — enrollment, requirements, courses, "
+                            "tuition, schedules, scholarships, school policies, and contact information. "
+                            "If the question is unrelated to ICCT Colleges, politely redirect the user. "
+                            "Keep answers concise, friendly, and helpful."
+                        )
+                    },
+                    {"role": "user", "content": user_message}
+                ],
+                max_tokens=500,
+                temperature=0.5,
+            )
+            return completion.choices[0].message.content
+        except Exception as e:
+            logger.warning(f"Groq API error: {e}")
+            return None
+
+    # ── Main response generator ──────────────────────────────────────────────
     def generate_response(self, text: str, db_context: Optional[dict] = None) -> dict:
         """
         Main method called by the backend routes.
         Returns reply, intent, confidence, entities, source, timestamp, and NLP method.
+
+        Priority order:
+        1. Gibberish check  → plain fallback
+        2. Groq AI          → richer, context-aware answer
+        3. Database context → stored FAQ answer
+        4. Clarification    → ask the user to pick an intent
+        5. Fallback         → witty out-of-scope reply
+        6. Keyword/semantic → built-in RESPONSES dict
         """
         if _is_gibberish(text):
-            entities = {}
-            reply = RESPONSES["fallback"]
-            logger.info(
-                "NLP -> gibberish/non-context input rejected before intent matching.")
             return {
-                "reply": reply,
+                "reply": RESPONSES["fallback"],
                 "intent": "fallback",
                 "confidence": 0.0,
-                "entities": entities,
+                "entities": {},
                 "alternatives": [],
                 "source": "nlp_fallback_gibberish",
                 "method": self._model_type,
@@ -757,21 +747,20 @@ class NLPEngine:
         intent = intent_result.intent
         entities = self.extract_entities(text)
 
-        if db_context and db_context.get("answer"):
+        # Try Groq first
+        groq_reply = self._ask_groq(text)
+        if groq_reply:
+            reply = groq_reply
+            source = "groq_ai"
+        elif db_context and db_context.get("answer"):
             reply = db_context["answer"]
             source = "database"
         elif intent == "clarification":
             reply = self._build_clarification_reply(intent_result.alternatives)
             source = "nlp_clarification"
         elif intent == "fallback":
-            # ── Smart fallback: gibberish gets the plain message,
-            #    real human questions get a witty out-of-scope reply. ──
-            if _is_gibberish(text):
-                reply = RESPONSES["fallback"]
-                source = "nlp_fallback_gibberish"
-            else:
-                reply = random.choice(OUT_OF_SCOPE_RESPONSES)
-                source = "nlp_fallback_out_of_scope"
+            reply = random.choice(OUT_OF_SCOPE_RESPONSES)
+            source = "nlp_fallback_out_of_scope"
         else:
             reply = RESPONSES.get(intent, RESPONSES["fallback"])
             source = "nlp_semantic"
