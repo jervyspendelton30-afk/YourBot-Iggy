@@ -23,9 +23,9 @@
     </div>
     <nav class="header-nav">
   <a href="about.html" class="nav-link" data-page="about">About</a>
-  <a href="login.html" class="nav-link">Login</a>
-  <a href="register.html" class="nav-link">Register</a>
-  <div class="profile-menu" id="profile-menu">
+  <a href="login.html" class="nav-link" id="nav-login-btn">Login</a>
+  <a href="register.html" class="nav-link" id="nav-register-btn">Register</a>
+  <div class="profile-menu" id="profile-menu" style="display:none;">
     <button class="profile-btn" id="profile-btn" onclick="ChatApp.toggleProfile()">
       <div class="profile-avatar" id="profile-avatar">👤</div>
       <span id="profile-name">Guest</span> ▾
@@ -201,7 +201,27 @@
   <script src="js/api.js"></script>
   <script src="js/chat.js"></script>
   <script src="js/app.js"></script>
+<script>
+  // Show Login/Register when guest, show profile when logged in
+  (function() {
+    const token = localStorage.getItem('icct_token');
+    const loginBtn    = document.getElementById('nav-login-btn');
+    const registerBtn = document.getElementById('nav-register-btn');
+    const profileMenu = document.getElementById('profile-menu');
 
+    if (token) {
+      // Logged in — hide login/register, show profile
+      if (loginBtn)    loginBtn.style.display    = 'none';
+      if (registerBtn) registerBtn.style.display = 'none';
+      if (profileMenu) profileMenu.style.display = 'flex';
+    } else {
+      // Guest — show login/register, hide profile
+      if (loginBtn)    loginBtn.style.display    = '';
+      if (registerBtn) registerBtn.style.display = '';
+      if (profileMenu) profileMenu.style.display = 'none';
+    }
+  })();
+</script>
 </body>
 
 </html>
