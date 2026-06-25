@@ -85,13 +85,15 @@ class DatabaseManager:
                 # Users table
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS users (
-                        id          TEXT    PRIMARY KEY,
-                        first_name  TEXT    NOT NULL,
-                        last_name   TEXT    NOT NULL,
-                        email       TEXT    NOT NULL UNIQUE,
-                        student_id  TEXT,
-                        password    TEXT    NOT NULL,
-                        created_at  TEXT    DEFAULT CURRENT_TIMESTAMP
+                        id                TEXT    PRIMARY KEY,
+                        first_name        TEXT    NOT NULL,
+                        last_name         TEXT    NOT NULL,
+                        email             TEXT    NOT NULL UNIQUE,
+                        student_id        TEXT,
+                        password          TEXT    NOT NULL,
+                        security_question TEXT,
+                        security_answer   TEXT,
+                        created_at        TEXT    DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
 
@@ -247,12 +249,43 @@ class DatabaseManager:
         try:
             with self._get_conn() as conn:
                 conn.execute(
-                    """INSERT INTO users (id, first_name, last_name, email, student_id, password)
-                       VALUES (:id, :first_name, :last_name, :email, :student_id, :password)""",
+                    """INSERT INTO users
+                       (id, first_name, last_name, email, student_id, password,
+                        security_question, security_answer)
+                       VALUES (:id, :first_name, :last_name, :email, :student_id, :password,
+                               :security_question, :security_answer)""",
                     user
                 )
                 conn.commit()
             return True
         except Exception as e:
             logger.error(f"DatabaseManager: create_user failed — {e}")
+            return False
+
+    def update_password(self, email: str, hashed_password: str) -> bool:
+        """Update a user's password."""
+        try:
+            with self._get_conn() as conn:
+                conn.execute(
+                    "UPDATE users SET password = ? WHERE email = ?",
+                    (hashed_password, email)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"DatabaseManager: update_password failed — {e}")
+            return False
+
+    def update_security_question(self, email: str, question: str, answer: str) -> bool:
+        """Save security question and answer for a user."""
+        try:
+            with self._get_conn() as conn:
+                conn.execute(
+                    "UPDATE users SET security_question = ?, security_answer = ? WHERE email = ?",
+                    (question, answer, email)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"DatabaseManager: update_security_question failed — {e}")
             return False
