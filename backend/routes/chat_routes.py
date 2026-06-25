@@ -15,33 +15,21 @@ chat_bp = Blueprint('chat', __name__)
 
 @chat_bp.route('/chat', methods=['POST'])
 def chat():
-    """
-    Main chat endpoint.
-    Accepts: { "message": "...", "session_id": "..." }
-    Returns: { "reply": "...", "intent": "...", "entities": {...}, "source": "..." }
-    """
     data = request.get_json(silent=True)
 
-    # ── Validate input ──────────────────────────────────────────
     if not data or not data.get('message', '').strip():
         return jsonify({"error": "Message is required."}), 400
 
-    user_message = data['message'].strip()[:500]   # Hard cap at 500 chars
+    user_message = data['message'].strip()[:500]
     session_id = data.get('session_id') or g.get('session_id', 'anonymous')
 
     if len(user_message) < 1:
         return jsonify({"error": "Message cannot be empty."}), 400
 
-    # ── Get shared instances ────────────────────────────────────
     nlp = current_app.nlp_engine
     db = current_app.db_manager
 
     try:
-        # Step 1: Short-circuit gibberish/meaningless input early.
-        # Skip the FAQ search entirely — substring matches inside response strings
-        # (e.g. "12" matching "8AM-12PM", "0" matching "300") would otherwise
-        # return a completely wrong answer for non-context input.
-        # Uses nlp.is_gibberish() to avoid cross-folder import issues.
         if nlp.is_gibberish(user_message):
             result = nlp.generate_response(user_message, db_context=None)
             db.log_interaction(
@@ -61,16 +49,13 @@ def chat():
                 "session_id": session_id
             }), 200
 
-        # Step 2: Search database for a matching FAQ (only for real input)
         db_context = None
         faq_match = db.search_faq(user_message)
         if faq_match:
             db_context = {"answer": faq_match["answer"]}
 
-        # Step 3: Run NLP engine (intent + entity detection + response)
         result = nlp.generate_response(user_message, db_context=db_context)
 
-        # Step 4: Log the interaction to the database
         db.log_interaction(
             session_id=session_id,
             user_message=user_message,
@@ -79,7 +64,6 @@ def chat():
             entities=result["entities"]
         )
 
-        # Step 5: Return response to front-end
         return jsonify({
             "reply":      result["reply"],
             "intent":     result["intent"],
@@ -110,52 +94,3 @@ def stats():
     except Exception as e:
         logger.error(f"[stats] Error: {e}")
         return jsonify({"error": "Could not retrieve stats."}), 500
-
-@auth_bp.route('/security-question', methods=['POST'])
-def get_security_question():
-    """Return the security question for a given email."""
-    data  = request.get_json()
-    email = data.get('email', '').strip()
-
-    if not email:
-        return jsonify({"message": "Email is required."}), 400
-
-    db   = current_app.db_manager
-    user = db.get_user_by_email(email)
-
-    if not user or not user.get('security_question'):
-        return jsonify({"message": "No security question found for this email."}), 404
-
-    return jsonify({
-        "question": user['security_question']
-    }), 200
-
-
-@auth_bp.route('/verify-security-answer', methods=['POST'])
-def verify_security_answer():
-    """Verify the security answer and allow password reset."""
-    data     = request.get_json()
-    email    = data.get('email', '').strip()
-    answer   = data.get('answer', '').strip().lower()
-    password = data.get('password', '')
-
-    if not all([email, answer, password]):
-        return jsonify({"message": "All fields are required."}), 400
-
-    if len(password) < 8:
-        return jsonify({"message": "Password must be at least 8 characters."}), 400
-
-    db   = current_app.db_manager
-    user = db.get_user_by_email(email)
-
-    if not user:
-        return jsonify({"message": "Email not found."}), 404
-
-    stored_answer = (user.get('security_answer') or '').strip().lower()
-    if answer != stored_answer:
-        return jsonify({"message": "Incorrect answer. Please try again."}), 401
-
-    hashed = hashlib.sha256(password.encode()).hexdigest()
-    db.update_password(email, hashed)
-
-    return jsonify({"message": "Password reset successful! You can now log in."}), 200
