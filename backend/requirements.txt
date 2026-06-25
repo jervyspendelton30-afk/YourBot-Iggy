@@ -7,4 +7,3 @@ flask-cors==4.0.1
 gunicorn
 scikit-learn
 groq
-flask-mail
