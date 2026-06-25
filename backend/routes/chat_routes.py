@@ -110,3 +110,52 @@ def stats():
     except Exception as e:
         logger.error(f"[stats] Error: {e}")
         return jsonify({"error": "Could not retrieve stats."}), 500
+
+@auth_bp.route('/security-question', methods=['POST'])
+def get_security_question():
+    """Return the security question for a given email."""
+    data  = request.get_json()
+    email = data.get('email', '').strip()
+
+    if not email:
+        return jsonify({"message": "Email is required."}), 400
+
+    db   = current_app.db_manager
+    user = db.get_user_by_email(email)
+
+    if not user or not user.get('security_question'):
+        return jsonify({"message": "No security question found for this email."}), 404
+
+    return jsonify({
+        "question": user['security_question']
+    }), 200
+
+
+@auth_bp.route('/verify-security-answer', methods=['POST'])
+def verify_security_answer():
+    """Verify the security answer and allow password reset."""
+    data     = request.get_json()
+    email    = data.get('email', '').strip()
+    answer   = data.get('answer', '').strip().lower()
+    password = data.get('password', '')
+
+    if not all([email, answer, password]):
+        return jsonify({"message": "All fields are required."}), 400
+
+    if len(password) < 8:
+        return jsonify({"message": "Password must be at least 8 characters."}), 400
+
+    db   = current_app.db_manager
+    user = db.get_user_by_email(email)
+
+    if not user:
+        return jsonify({"message": "Email not found."}), 404
+
+    stored_answer = (user.get('security_answer') or '').strip().lower()
+    if answer != stored_answer:
+        return jsonify({"message": "Incorrect answer. Please try again."}), 401
+
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    db.update_password(email, hashed)
+
+    return jsonify({"message": "Password reset successful! You can now log in."}), 200
