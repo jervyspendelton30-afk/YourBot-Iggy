@@ -3,10 +3,8 @@
  * Component 1: Web-Based Chat Interface (Front-End)
  * Connects to: Component 2 (Back-End Server)
  */
-
 const API = (() => {
-
-  const BASE_URL = window.location.protocol + '//' + window.location.hostname + ':5000/api';
+  const BASE_URL = 'https://yourbot-iggy.onrender.com/api';
 
   /** Send a chat message and receive the bot response */
   async function sendMessage(message, sessionId) {
@@ -18,23 +16,11 @@ const API = (() => {
       },
       body: JSON.stringify({ message, session_id: sessionId })
     });
-
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.message || `Server error ${response.status}`);
     }
-
     return await response.json();
-    /*
-      Expected response shape:
-      {
-        "reply":    "Here is the answer...",
-        "intent":   "enrollment_inquiry",
-        "entities": { "course": "BSIT" },
-        "source":   "database" | "nlp_model",
-        "session_id": "..."
-      }
-    */
   }
 
   /** Retrieve FAQ entries from the database */
