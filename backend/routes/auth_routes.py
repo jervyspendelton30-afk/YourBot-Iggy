@@ -39,7 +39,7 @@ def login():
     email    = data.get('email', '').strip()
     password = data.get('password', '')
 
-    if not email or not password:
+    if not all([email, password]):
         return jsonify({"message": "Email and password are required."}), 400
 
     db = current_app.db_manager
@@ -52,12 +52,13 @@ def login():
     if user['password'] != hashed:
         return jsonify({"message": "Invalid email or password."}), 401
 
+    token = str(uuid.uuid4())
+
     return jsonify({
-        "message": "Login successful.",
-        "token": user['id'],
-        "user": {
-            "first_name": user['first_name'],
-            "last_name":  user['last_name'],
-            "email":      user['email']
-        }
+        "message":    "Login successful.",
+        "token":      token,
+        "first_name": user['first_name'],
+        "last_name":  user['last_name'],
+        "email":      user['email'],
+        "student_id": user.get('student_id', '')
     }), 200
