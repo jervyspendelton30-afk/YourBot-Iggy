@@ -6,7 +6,7 @@
 
 const API = (() => {
 
-  const BASE_URL = 'https://iggy-chatbot-1-oic6.onrender.com/api';   // Change to production URL when deploying
+  const BASE_URL = window.location.protocol + '//' + window.location.hostname + ':5000/api';
 
   /** Send a chat message and receive the bot response */
   async function sendMessage(message, sessionId) {
