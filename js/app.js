@@ -25,13 +25,11 @@ const ChatApp = (() => {
   function _bindEvents() {
     const inp = input();
 
-    // Auto-resize + char counter
     inp.addEventListener('input', () => {
       Utils.autoResize(inp);
       charCount().textContent = `${inp.value.length}/500`;
     });
 
-    // Enter to send (Shift+Enter = newline)
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -39,7 +37,6 @@ const ChatApp = (() => {
       }
     });
 
-    // Sidebar topic links
     document.querySelectorAll('.topic-item').forEach(item => {
       item.addEventListener('click', () => {
         inp.value = item.dataset.query;
@@ -63,24 +60,17 @@ const ChatApp = (() => {
     const text = input().value.trim();
     if (!text || isLoading) return;
 
-    // Clear input
     input().value = '';
     Utils.autoResize(input());
     charCount().textContent = '0/500';
 
-    // Hide suggestions after first message
     document.getElementById('suggestions-bar').style.display = 'none';
 
-    // Render user bubble
     Chat.appendUserMessage(text);
 
-    // Store in local history
     messageHistory.push({ role: 'user', content: text, time: Date.now() });
-
-    // Update sidebar to show current session
     Chat.updateCurrentSession(sessionId, messageHistory);
 
-    // Show typing
     isLoading = true;
     sendBtn().disabled = true;
     Chat.showTyping();
@@ -91,8 +81,6 @@ const ChatApp = (() => {
       Chat.appendBotMessage(data.reply, data.intent);
 
       messageHistory.push({ role: 'bot', content: data.reply, intent: data.intent, time: Date.now() });
-
-      // Save updated session
       Chat.updateCurrentSession(sessionId, messageHistory);
 
     } catch (err) {
@@ -122,16 +110,13 @@ const ChatApp = (() => {
     const session = sessions.find(s => s.id === sid);
     if (!session) return;
 
-    // Save current session first if it has messages
     if (messageHistory.length > 0) {
       Chat.updateCurrentSession(sessionId, messageHistory);
     }
 
-    // Load the selected session
     sessionId = session.id;
     messageHistory = session.history || [];
 
-    // Render messages
     const area = document.getElementById('messages-area');
     area.innerHTML = '';
     messageHistory.forEach(m => {
@@ -143,14 +128,12 @@ const ChatApp = (() => {
     input().focus();
   }
 
-  /** Start a brand new chat (saves current session to history) */
+  /** Start a brand new chat */
   function clearChat() {
-    // Save current session before clearing
     if (messageHistory.length > 0) {
       Chat.updateCurrentSession(sessionId, messageHistory);
     }
 
-    // Start fresh
     sessionId = Utils.generateSessionId();
     messageHistory = [];
 
@@ -177,8 +160,28 @@ const ChatApp = (() => {
     Utils.showToast('Chat exported!');
   }
 
+  /** Toggle profile dropdown */
+  function toggleProfile() {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown) {
+      dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    }
+  }
+
+  /** Logout — clear all stored user data */
+  function logout() {
+    localStorage.removeItem('icct_token');
+    localStorage.removeItem('icct_first_name');
+    localStorage.removeItem('icct_last_name');
+    localStorage.removeItem('icct_email');
+    localStorage.removeItem('icct_guest');
+    window.location.href = 'login.html';
+  }
+
   // Auto-init when DOM is ready
   document.addEventListener('DOMContentLoaded', init);
 
-  return { sendMessage, sendSuggestion, clearChat, exportChat, loadSession };
+  // ── Public API ────────────────────────────────────────────────
+  return { sendMessage, sendSuggestion, clearChat, exportChat, loadSession, toggleProfile, logout };
+
 })();
