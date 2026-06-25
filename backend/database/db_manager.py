@@ -1,12 +1,6 @@
 """
 db_manager.py – Database Management
 Component 4: Database Management
-
-Handles:
-- SQLite connection (local dev) — swap for Cloud SQL / Firebase in production
-- Storing and retrieving FAQs, courses, schedules
-- Logging all user interactions for analytics
-- Session management records
 """
 
 import sqlite3
@@ -16,38 +10,23 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# ── Database file path ────────────────────────────────────────────
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'icct_chatbot.db')
 
 
 class DatabaseManager:
-    """
-    Manages all database operations for the ICCT Chatbot.
-
-    Uses SQLite for local development.
-    To switch to Cloud SQL (MySQL/PostgreSQL):
-        - Replace sqlite3 with mysql-connector-python or psycopg2
-        - Update connect() with your Cloud SQL credentials
-
-    To switch to Firebase Firestore:
-        - Use firebase_admin SDK
-        - Replace SQL queries with Firestore collection reads/writes
-    """
 
     def __init__(self):
         self._connected = False
         self._init_db()
 
-    # ── Connection ─────────────────────────────────────────────────
     def _get_conn(self):
         conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row   # Returns rows as dicts
+        conn.row_factory = sqlite3.Row
         return conn
 
     def is_connected(self):
         return self._connected
 
-    # ── Initialization ─────────────────────────────────────────────
     def _init_db(self):
         """Create all tables and seed initial FAQ data if empty."""
         try:
@@ -103,6 +82,19 @@ class DatabaseManager:
                     )
                 """)
 
+                # Users table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id          TEXT    PRIMARY KEY,
+                        first_name  TEXT    NOT NULL,
+                        last_name   TEXT    NOT NULL,
+                        email       TEXT    NOT NULL UNIQUE,
+                        student_id  TEXT,
+                        password    TEXT    NOT NULL,
+                        created_at  TEXT    DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
                 conn.commit()
                 self._seed_data(cur, conn)
                 self._connected = True
@@ -115,7 +107,6 @@ class DatabaseManager:
     def _seed_data(self, cur, conn):
         """Insert default FAQ and course data if tables are empty."""
 
-        # ── Seed FAQs ──
         cur.execute("SELECT COUNT(*) FROM faqs")
         if cur.fetchone()[0] == 0:
             faqs = [
@@ -140,18 +131,17 @@ class DatabaseManager:
                 "INSERT INTO faqs (category, question, answer) VALUES (?, ?, ?)", faqs
             )
 
-        # ── Seed Courses ──
         cur.execute("SELECT COUNT(*) FROM courses")
         if cur.fetchone()[0] == 0:
             courses = [
-                ("BSIT",  "BS Information Technology",      "College of Computer Studies",    161, "Covers networking, web dev, databases, and software engineering."),
-                ("BSCS",  "BS Computer Science",            "College of Computer Studies",    165, "Focuses on algorithms, AI, and theoretical computing."),
-                ("BSCpE", "BS Computer Engineering",        "College of Computer Studies",    175, "Combines electronics engineering and computer science."),
-                ("BSBA",  "BS Business Administration",     "College of Business",            129, "Covers management, marketing, finance, and entrepreneurship."),
-                ("BSA",   "BS Accountancy",                 "College of Business",            176, "Prepares students for the CPA board examination."),
-                ("BSN",   "BS Nursing",                     "College of Nursing",             158, "Prepares students for the NLE nursing board examination."),
-                ("BEEd",  "Bachelor of Elementary Education","College of Education",          126, "Prepares teachers for elementary school level."),
-                ("BSEd",  "Bachelor of Secondary Education","College of Education",           130, "Prepares teachers for high school level."),
+                ("BSIT",  "BS Information Technology",       "College of Computer Studies", 161, "Covers networking, web dev, databases, and software engineering."),
+                ("BSCS",  "BS Computer Science",             "College of Computer Studies", 165, "Focuses on algorithms, AI, and theoretical computing."),
+                ("BSCpE", "BS Computer Engineering",         "College of Computer Studies", 175, "Combines electronics engineering and computer science."),
+                ("BSBA",  "BS Business Administration",      "College of Business",         129, "Covers management, marketing, finance, and entrepreneurship."),
+                ("BSA",   "BS Accountancy",                  "College of Business",         176, "Prepares students for the CPA board examination."),
+                ("BSN",   "BS Nursing",                      "College of Nursing",          158, "Prepares students for the NLE nursing board examination."),
+                ("BEEd",  "Bachelor of Elementary Education","College of Education",        126, "Prepares teachers for elementary school level."),
+                ("BSEd",  "Bachelor of Secondary Education", "College of Education",        130, "Prepares teachers for high school level."),
             ]
             cur.executemany(
                 "INSERT INTO courses (code, name, college, units, description) VALUES (?, ?, ?, ?, ?)",
@@ -162,7 +152,6 @@ class DatabaseManager:
 
     # ── FAQ Queries ────────────────────────────────────────────────
     def get_faqs(self, category: str = None) -> list:
-        """Return all FAQs, optionally filtered by category."""
         with self._get_conn() as conn:
             cur = conn.cursor()
             if category:
@@ -172,13 +161,8 @@ class DatabaseManager:
             return [dict(row) for row in cur.fetchall()]
 
     def search_faq(self, query: str) -> dict | None:
-        """
-        Search FAQs for a question matching the user's query.
-        Returns the best matching FAQ row or None.
-        """
         with self._get_conn() as conn:
             cur = conn.cursor()
-            # Simple LIKE search — extend with FTS5 for better full-text search
             cur.execute(
                 "SELECT * FROM faqs WHERE question LIKE ? OR answer LIKE ? LIMIT 1",
                 (f"%{query}%", f"%{query}%")
@@ -206,7 +190,6 @@ class DatabaseManager:
     # ── Interaction Logging ────────────────────────────────────────
     def log_interaction(self, session_id: str, user_message: str,
                         bot_reply: str, intent: str = None, entities: str = None):
-        """Save every chat exchange to the database for analytics."""
         try:
             with self._get_conn() as conn:
                 conn.execute(
@@ -236,16 +219,40 @@ class DatabaseManager:
 
     # ── Analytics ──────────────────────────────────────────────────
     def get_interaction_stats(self) -> dict:
-        """Return basic analytics from the interaction log."""
         with self._get_conn() as conn:
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM interaction_logs")
             total = cur.fetchone()[0]
-
             cur.execute("SELECT intent, COUNT(*) as count FROM interaction_logs GROUP BY intent ORDER BY count DESC")
             intents = [dict(row) for row in cur.fetchall()]
-
             cur.execute("SELECT COUNT(DISTINCT session_id) FROM interaction_logs")
             sessions = cur.fetchone()[0]
-
         return {"total_messages": total, "unique_sessions": sessions, "top_intents": intents}
+
+    # ── User Auth ──────────────────────────────────────────────────
+    def get_user_by_email(self, email: str) -> dict | None:
+        """Retrieve a user record by email address."""
+        try:
+            with self._get_conn() as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+                row = cur.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"DatabaseManager: get_user_by_email failed — {e}")
+            return None
+
+    def create_user(self, user: dict) -> bool:
+        """Insert a new user into the database."""
+        try:
+            with self._get_conn() as conn:
+                conn.execute(
+                    """INSERT INTO users (id, first_name, last_name, email, student_id, password)
+                       VALUES (:id, :first_name, :last_name, :email, :student_id, :password)""",
+                    user
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"DatabaseManager: create_user failed — {e}")
+            return False
