@@ -55,6 +55,7 @@ app.db_manager = db_manager
 app.register_blueprint(chat_bp,     url_prefix='/api')
 app.register_blueprint(faq_bp,      url_prefix='/api')
 app.register_blueprint(feedback_bp, url_prefix='/api')
+app.register_blueprint(auth_bp, url_prefix='/api')
 
 # ── Serve frontend ─────────────────────────────────────────────────
 @app.route('/')
