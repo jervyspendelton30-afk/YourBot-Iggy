@@ -567,7 +567,10 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Login failed');
 
-        localStorage.setItem('icct_token', data.token);
+        localStorage.setItem('icct_token',      data.token);
+        localStorage.setItem('icct_first_name', data.first_name);
+        localStorage.setItem('icct_last_name',  data.last_name);
+        localStorage.setItem('icct_email',      data.email);
         localStorage.removeItem('icct_guest');
         window.location.href = 'index.html';
 
