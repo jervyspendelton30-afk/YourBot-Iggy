@@ -614,7 +614,7 @@
     // ── Forgot password placeholder ──
     document.getElementById('forgot-link').addEventListener('click', e => {
       e.preventDefault();
-      showToast('📧 Password reset — contact your administrator.');
+      window.location.href = 'forgot-password.html';
     });
   </script>
 </body>
