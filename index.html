@@ -22,28 +22,28 @@
       </div>
     </div>
     <nav class="header-nav">
-  <a href="about.html" class="nav-link" data-page="about">About</a>
-  <a href="login.html" class="nav-link" id="nav-login-btn">Login</a>
-  <a href="register.html" class="nav-link" id="nav-register-btn">Register</a>
-  <div class="profile-menu" id="profile-menu" style="display:none;">
-    <button class="profile-btn" id="profile-btn" onclick="ChatApp.toggleProfile()">
-      <div class="profile-avatar" id="profile-avatar">👤</div>
-      <span id="profile-name">Guest</span> ▾
-    </button>
-    <div class="profile-dropdown" id="profile-dropdown">
-      <div class="profile-card">
-        <div class="profile-avatar-lg" id="profile-avatar-lg">👤</div>
-        <div class="profile-info">
-          <div class="profile-fullname" id="profile-fullname">Guest User</div>
-          <div class="profile-email" id="profile-email">—</div>
-          <div class="profile-studentid" id="profile-studentid"></div>
+      <a href="about.html" class="nav-link" data-page="about">About</a>
+      <a href="login.html" class="nav-link" id="nav-login-btn">Login</a>
+      <a href="register.html" class="nav-link" id="nav-register-btn">Register</a>
+      <div class="profile-menu" id="profile-menu" style="display:none;">
+        <button class="profile-btn" id="profile-btn" onclick="ChatApp.toggleProfile()">
+          <div class="profile-avatar" id="profile-avatar">👤</div>
+          <span id="profile-name">Guest</span> ▾
+        </button>
+        <div class="profile-dropdown" id="profile-dropdown">
+          <div class="profile-card">
+            <div class="profile-avatar-lg" id="profile-avatar-lg">👤</div>
+            <div class="profile-info">
+              <div class="profile-fullname" id="profile-fullname">Guest User</div>
+              <div class="profile-email" id="profile-email">—</div>
+              <div class="profile-studentid" id="profile-studentid"></div>
+            </div>
+          </div>
+          <div class="profile-divider"></div>
+          <button class="profile-logout" onclick="ChatApp.logout()">🚪 Logout</button>
         </div>
       </div>
-      <div class="profile-divider"></div>
-      <button class="profile-logout" onclick="ChatApp.logout()">🚪 Logout</button>
-    </div>
-  </div>
-</nav>
+    </nav>
   </header>
 
   <!-- ===== MAIN CONTENT ===== -->
@@ -201,27 +201,25 @@
   <script src="js/api.js"></script>
   <script src="js/chat.js"></script>
   <script src="js/app.js"></script>
-<script>
-  // Show Login/Register when guest, show profile when logged in
-  (function() {
-    const token = localStorage.getItem('icct_token');
-    const loginBtn    = document.getElementById('nav-login-btn');
-    const registerBtn = document.getElementById('nav-register-btn');
-    const profileMenu = document.getElementById('profile-menu');
 
-    if (token) {
-      // Logged in — hide login/register, show profile
-      if (loginBtn)    loginBtn.style.display    = 'none';
-      if (registerBtn) registerBtn.style.display = 'none';
-      if (profileMenu) profileMenu.style.display = 'flex';
-    } else {
-      // Guest — show login/register, hide profile
-      if (loginBtn)    loginBtn.style.display    = '';
-      if (registerBtn) registerBtn.style.display = '';
-      if (profileMenu) profileMenu.style.display = 'none';
-    }
-  })();
-</script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      const token       = localStorage.getItem('icct_token');
+      const loginBtn    = document.getElementById('nav-login-btn');
+      const registerBtn = document.getElementById('nav-register-btn');
+      const profileMenu = document.getElementById('profile-menu');
+
+      if (token) {
+        if (loginBtn)    loginBtn.style.display    = 'none';
+        if (registerBtn) registerBtn.style.display = 'none';
+        if (profileMenu) profileMenu.style.display = 'flex';
+      } else {
+        if (loginBtn)    loginBtn.style.display    = '';
+        if (registerBtn) registerBtn.style.display = '';
+        if (profileMenu) profileMenu.style.display = 'none';
+      }
+    });
+  </script>
+
 </body>
-
 </html>
