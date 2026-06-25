@@ -1,15 +1,3 @@
-"""
-app.py – Main Flask back-end server
-Component 2: Back-End Server
-
-Handles:
-- REST API endpoints for the chat front-end
-- Session management
-- Routing queries to the NLP module
-- Coordinating responses from the database
-- Serving the front-end (HTML/CSS/JS) files
-"""
-
 from flask import Flask, request, jsonify, g, send_from_directory
 from flask_cors import CORS
 import uuid
@@ -22,12 +10,11 @@ from database.db_manager import DatabaseManager
 from routes.chat_routes import chat_bp
 from routes.faq_routes import faq_bp
 from routes.feedback_routes import feedback_bp
+from routes.auth_routes import auth_bp
 
-# ── Path setup ──────────────────────────────────────────────────────
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.abspath(os.path.join(BACKEND_DIR, '..', 'frontend'))
 
-# ── App Setup ────────────────────────────────────────────────────
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "X-Session-ID"])
 
@@ -37,27 +24,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Configuration ─────────────────────────────────────────────────
 app.config.update(
-    SECRET_KEY="change-this-in-production",
-    MAX_CONTENT_LENGTH=1 * 1024 * 1024,   # 1 MB max request body
-    SESSION_TIMEOUT=1800,                  # 30 minutes
+    SECRET_KEY=os.environ.get("SECRET_KEY", "change-this-in-production"),
+    MAX_CONTENT_LENGTH=1 * 1024 * 1024,
+    SESSION_TIMEOUT=1800,
 )
 
-# ── Shared instances (injected into blueprints via app context) ───
 nlp_engine = NLPEngine()
-db_manager = DatabaseManager()
+db_manager  = DatabaseManager()
 
 app.nlp_engine = nlp_engine
-app.db_manager = db_manager
+app.db_manager  = db_manager
 
-# ── Register blueprints ───────────────────────────────────────────
 app.register_blueprint(chat_bp,     url_prefix='/api')
 app.register_blueprint(faq_bp,      url_prefix='/api')
 app.register_blueprint(feedback_bp, url_prefix='/api')
-app.register_blueprint(auth_bp, url_prefix='/api')
+app.register_blueprint(auth_bp,     url_prefix='/api')
 
-# ── Serve frontend ─────────────────────────────────────────────────
 @app.route('/')
 def serve_index():
     return send_from_directory(FRONTEND_DIR, 'index.html')
@@ -66,7 +49,6 @@ def serve_index():
 def serve_static(filename):
     return send_from_directory(FRONTEND_DIR, filename)
 
-# ── Health check ──────────────────────────────────────────────────
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
@@ -76,10 +58,8 @@ def health():
         "db_ready":  db_manager.is_connected()
     })
 
-# ── Request hooks ─────────────────────────────────────────────────
 @app.before_request
 def attach_session():
-    """Attach or create a session ID for every request."""
     g.session_id = request.headers.get('X-Session-ID') or str(uuid.uuid4())
 
 @app.after_request
@@ -87,7 +67,6 @@ def add_headers(response):
     response.headers['X-Session-ID'] = g.get('session_id', '')
     return response
 
-# ── Error handlers ────────────────────────────────────────────────
 @app.errorhandler(400)
 def bad_request(e):
     return jsonify({"error": "Bad request", "message": str(e)}), 400
@@ -101,8 +80,6 @@ def server_error(e):
     logger.error(f"Server error: {e}")
     return jsonify({"error": "Internal server error"}), 500
 
-# ── Entry point ───────────────────────────────────────────────────
 if __name__ == '__main__':
     logger.info("Starting ICCT Chatbot back-end server…")
-    logger.info(f"Frontend directory: {FRONTEND_DIR}")
     app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
