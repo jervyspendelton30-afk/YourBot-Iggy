@@ -54,6 +54,13 @@
       <a href="about.html" class="mobile-nav-link">About</a>
       <a href="login.html" class="mobile-nav-link" id="mob-login-btn">Login</a>
       <a href="register.html" class="mobile-nav-link" id="mob-register-btn">Register</a>
+      <!-- Profile entry shown when logged in (hidden by default) -->
+      <div id="mob-profile-entry" style="display:none; flex-direction:column;">
+        <span class="mobile-nav-link" id="mob-profile-name"
+          style="font-weight:700; pointer-events:none;">👤 User</span>
+        <a href="#" class="mobile-nav-link" style="color:#ff6b6b;"
+          onclick="ChatApp.logout(); return false;">🚪 Logout</a>
+      </div>
     </div>
   </header>
 
@@ -259,50 +266,64 @@
   <script src="js/chat.js"></script>
   <script src="js/app.js"></script>
 
- <script>
-  window.addEventListener('DOMContentLoaded', function () {
-    const token       = localStorage.getItem('icct_token');
-    const loginBtn    = document.getElementById('nav-login-btn');
-    const registerBtn = document.getElementById('nav-register-btn');
-    const profileMenu = document.getElementById('profile-menu');
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      const token = localStorage.getItem('icct_token');
 
-    if (token) {
-      // Logged in — hide login/register, show profile
-      if (loginBtn)    loginBtn.style.display    = 'none';
-      if (registerBtn) registerBtn.style.display = 'none';
-      if (profileMenu) profileMenu.style.display = 'flex';
+      // Desktop nav
+      const loginBtn    = document.getElementById('nav-login-btn');
+      const registerBtn = document.getElementById('nav-register-btn');
+      const profileMenu = document.getElementById('profile-menu');
 
-      // Try to decode user info from localStorage
-      const firstName = localStorage.getItem('icct_first_name') || 'User';
-      const email     = localStorage.getItem('icct_email') || '';
+      // Mobile nav
+      const mobLoginBtn    = document.getElementById('mob-login-btn');
+      const mobRegisterBtn = document.getElementById('mob-register-btn');
+      const mobProfileEntry = document.getElementById('mob-profile-entry');
 
-      const nameEl  = document.getElementById('profile-name');
-      const fullEl  = document.getElementById('profile-fullname');
-      const emailEl = document.getElementById('profile-email');
+      if (token) {
+        // ── Logged in ──
+        if (loginBtn)       loginBtn.style.display       = 'none';
+        if (registerBtn)    registerBtn.style.display    = 'none';
+        if (profileMenu)    profileMenu.style.display    = 'flex';
+        if (mobLoginBtn)    mobLoginBtn.style.display    = 'none';
+        if (mobRegisterBtn) mobRegisterBtn.style.display = 'none';
+        if (mobProfileEntry) mobProfileEntry.style.display = 'flex';
 
-      if (nameEl)  nameEl.textContent  = firstName;
-      if (fullEl)  fullEl.textContent  = firstName;
-      if (emailEl) emailEl.textContent = email;
+        const firstName = localStorage.getItem('icct_first_name') || 'User';
+        const email     = localStorage.getItem('icct_email') || '';
 
-    } else {
-      // Guest — hide profile menu completely
-      if (loginBtn)    loginBtn.style.display    = '';
-      if (registerBtn) registerBtn.style.display = '';
-      if (profileMenu) profileMenu.style.display = 'none';
-    }
-  });
-</script>
-<script>
-  document.getElementById('hamburger-btn').addEventListener('click', function () {
-    document.getElementById('mobile-nav').classList.toggle('open');
-  });
+        const nameEl    = document.getElementById('profile-name');
+        const fullEl    = document.getElementById('profile-fullname');
+        const emailEl   = document.getElementById('profile-email');
+        const mobNameEl = document.getElementById('mob-profile-name');
 
-  // Hide mobile nav when a link is clicked
-  document.querySelectorAll('.mobile-nav-link').forEach(function (link) {
-    link.addEventListener('click', function () {
-      document.getElementById('mobile-nav').classList.remove('open');
+        if (nameEl)    nameEl.textContent    = firstName;
+        if (fullEl)    fullEl.textContent    = firstName;
+        if (emailEl)   emailEl.textContent   = email;
+        if (mobNameEl) mobNameEl.textContent = '👤 ' + firstName;
+
+      } else {
+        // ── Guest ──
+        if (loginBtn)       loginBtn.style.display       = '';
+        if (registerBtn)    registerBtn.style.display    = '';
+        if (profileMenu)    profileMenu.style.display    = 'none';
+        if (mobLoginBtn)    mobLoginBtn.style.display    = '';
+        if (mobRegisterBtn) mobRegisterBtn.style.display = '';
+        if (mobProfileEntry) mobProfileEntry.style.display = 'none';
+      }
     });
-  });
-</script>
+  </script>
+
+  <script>
+    document.getElementById('hamburger-btn').addEventListener('click', function () {
+      document.getElementById('mobile-nav').classList.toggle('open');
+    });
+
+    document.querySelectorAll('.mobile-nav-link').forEach(function (link) {
+      link.addEventListener('click', function () {
+        document.getElementById('mobile-nav').classList.remove('open');
+      });
+    });
+  </script>
 </body>
 </html>
